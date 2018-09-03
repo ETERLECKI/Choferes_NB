@@ -4,6 +4,7 @@ import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
@@ -39,6 +40,10 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewHolder
     private String fechaCal;
     private AlarmManager alarmMgr;
     private PendingIntent alarmIntent;
+    public String chofer1;
+    public String unidad1;
+    SharedPreferences preferencias;
+    SharedPreferences.Editor upreferencias;
 
     public RecyclerViewAdapter(Context context, List<ItemObject> itemList) {
         this.itemList = itemList;
@@ -53,22 +58,23 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewHolder
         alarmMgr = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         Intent intent = new Intent(context, RecyclerViewAdapter.class);
         alarmIntent = PendingIntent.getBroadcast(context, 0, intent, 0);
-
+        preferencias = context.getSharedPreferences("MisPreferencias", context.getApplicationContext().MODE_PRIVATE);
+        chofer1= preferencias.getString("nombre","error n");
+        unidad1= preferencias.getString("unidad","error u");
         return rcv;
     }
 
     @Override
     public void onBindViewHolder(final RecyclerViewHolders holder, final int position) {
-
-
+        Log.d("Tag2", "Entro al adapter");
         holder.hora_txt.setText((itemList.get(position).getHora()));
         holder.disponible1.setText(itemList.get(position).getHora());
         holder.disponible2.setText(itemList.get(position).getHora());
-
+        Log.d("Tag3","Llegué aqui");
         holder.carril1_card.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                generaTurno("1", holder.disponible1.getText().toString(), "Terlecki", "NUX099");
+                generaTurno("1", holder.disponible1.getText().toString(), chofer1, unidad1);
                 // Alarma a las 8:30 a.m.
                 Calendar calendar = Calendar.getInstance();
                 calendar.setTimeInMillis(System.currentTimeMillis());
@@ -88,7 +94,7 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewHolder
         holder.carril2_card.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                generaTurno("2", holder.disponible2.getText().toString(), "Terlecki", "NUX099");
+                generaTurno("2", holder.disponible2.getText().toString(), chofer1, unidad1);
             }
         });
         holder.carril2_card.setOnLongClickListener(new View.OnLongClickListener() {

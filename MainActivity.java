@@ -1,6 +1,7 @@
 package ar.com.nbcargo.nbcargo_choferes;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.design.widget.BottomNavigationView;
@@ -35,10 +36,14 @@ import devs.mulham.horizontalcalendar.HorizontalCalendar;
 
 public class MainActivity extends AppCompatActivity {
 
+    SharedPreferences preferencias;
+    SharedPreferences.Editor upreferencias;
     private RecyclerViewAdapter adapter;
     private RecyclerView recyclerview_comb;
     private LinearLayoutManager layoutManager;
     private Context context;
+    public String Chofer1;
+    public String Unidad1;
 
 
     private BottomNavigationView.OnNavigationItemSelectedListener mOnNavigationItemSelectedListener
@@ -62,17 +67,28 @@ public class MainActivity extends AppCompatActivity {
     };
 
     @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+        finishAffinity();
+        System.exit(0);
+    }
+
+    @Override
     protected void onCreate(Bundle savedInstanceState) {
 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        preferencias = getSharedPreferences("MisPreferencias", getApplicationContext().MODE_PRIVATE);
         layoutManager = new LinearLayoutManager(MainActivity.this);
         recyclerview_comb = findViewById(R.id.recycler_comb);
         recyclerview_comb.setLayoutManager(layoutManager);
-
+        Log.d("Tag3", "Llegue hasta acá");
         BottomNavigationView navigation = (BottomNavigationView) findViewById(R.id.navigation);
         navigation.setOnNavigationItemSelectedListener(mOnNavigationItemSelectedListener);
-
+        Chofer1 = preferencias.getString("nombre", "Error nombre");
+        Unidad1 = preferencias.getString("unidad", "Error unidad");
+        Log.d("Tag4", "Nombre: " + Chofer1);
+        Log.d("Tag4", "Unidad: " + Unidad1);
 
         requestJsonObject("combustible");
     }
@@ -83,7 +99,23 @@ public class MainActivity extends AppCompatActivity {
         return super.onCreateOptionsMenu(menu);
     }
 
+/*    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        Log.d("Tag3", "Llegue hasta acá 2");
+        int id = item.getItemId();
+
+        //noinspection SimplifiableIfStatement
+        if (id == R.id.mnu_cerrarSesion) {
+            upreferencias.putString("sesion", "cerrada");
+        }
+
+
+
+        return true;
+    }*/
+
     public void requestJsonObject(String consulta) {
+
         RequestQueue queue = Volley.newRequestQueue(this);
 
         String url = "http://192.168.5.199/arma_horario.php?consulta=" + consulta + "&fecha=" + turnos_combustible.valorCalendario;
@@ -93,7 +125,7 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onResponse(String response) {
-
+                Log.d("Tag3", "Llegue hasta acá 3");
                 if (response.length() != 6) {
                     Log.d("Tag2", "response: " + response);
                     GsonBuilder builder = new GsonBuilder();
@@ -105,6 +137,7 @@ public class MainActivity extends AppCompatActivity {
                     recyclerview_comb.setAdapter(adapter);
                     //getSupportActionBar().setSubtitle("");
                     //getSupportActionBar().setSubtitle(subTituloA + " (" + String.valueOf(adapter.getItemCount()) + ")");
+                    Log.d("Tag3", "Llegue hasta acá 4");
 
                 } else {
                     Toast.makeText(MainActivity.this, "Actualmente no hay novedades a mostrar de este tipo", Toast.LENGTH_LONG).show();

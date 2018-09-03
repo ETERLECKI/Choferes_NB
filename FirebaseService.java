@@ -1,6 +1,7 @@
 package ar.com.nbcargo.nbcargo_choferes;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -22,55 +23,18 @@ public class FirebaseService extends FirebaseInstanceIdService {
 
     private String url;
     private Context context;
+    SharedPreferences preferencias;
+    SharedPreferences.Editor upreferencias;
 
-    public void onTokenRefresh(){
+    public void onTokenRefresh() {
         // Get updated InstanceID token.
         String refreshedToken = FirebaseInstanceId.getInstance().getToken();
-        Log.d("Tag2", "Refreshed token: " + refreshedToken);
 
-        // If you want to send messages to this application instance or
-        // manage this apps subscriptions on the server side, send the
-        // Instance ID token to your app server.
-        sendRegistrationToServer(refreshedToken);
-    }
-
-    private void sendRegistrationToServer(String refreshedToken) {
-
-            context= getApplicationContext();
-            url = "http://192.168.5.199/guarda_token_chofer.php?chofer=Terlecki&token=" + refreshedToken;
-            url = url.replace(" ", "+");
-
-            Log.d("Tag2", url);
-
-            /*RequestQueue requestQueue = Volley.newRequestQueue(context.getApplicationContext());
-            StringRequest stringRequest = new StringRequest(Request.Method.GET, url, new Response.Listener<String>() {
-                @Override
-                public void onResponse(String response) {
-
-                    try {
-                        JSONObject jsonObject = new JSONObject(response);
-                        if (jsonObject.getInt("success") == 1) {
-                            Toast.makeText(context, "Token guardado correctamente", Toast.LENGTH_SHORT).show();
-                        } else {
-                            Toast.makeText(context, "No se pudo guardar token", Toast.LENGTH_SHORT).show();
-                        }
-                    } catch (JSONException e) {
-                        e.printStackTrace();
-                    }
-
-                }
-            }, new Response.ErrorListener() {
-                @Override
-                public void onErrorResponse(VolleyError error) {
-                    error.printStackTrace();
-                    Log.d("TAG2", "Zona de error btn_realizado");
-                    Toast.makeText(context, "Error al generar consulta", Toast.LENGTH_SHORT).show();
-                }
-            });
-            int socketTimeout = 30000;
-            RetryPolicy policy = new DefaultRetryPolicy(socketTimeout, DefaultRetryPolicy.DEFAULT_MAX_RETRIES, DefaultRetryPolicy.DEFAULT_BACKOFF_MULT);
-            stringRequest.setRetryPolicy(policy);
-            requestQueue.add(stringRequest);*/
-        }
+        preferencias = getSharedPreferences("MisPreferencias", getApplicationContext().MODE_PRIVATE);
+        upreferencias = preferencias.edit();
+        upreferencias.putString("token", refreshedToken);
+        upreferencias.commit();
 
     }
+
+}
