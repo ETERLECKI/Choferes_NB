@@ -1,6 +1,7 @@
 package ar.com.nbcargo.nbcargo_choferes;
 
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
@@ -59,7 +60,8 @@ public class MainActivity extends AppCompatActivity {
                     requestJsonObject("lavadero");
                     return true;
                 case R.id.navigation_notifications:
-
+                    Intent i = new Intent(getApplicationContext(), anuncio_combustible.class );
+                    startActivity(i);
                     return true;
             }
             return false;
@@ -99,20 +101,21 @@ public class MainActivity extends AppCompatActivity {
         return super.onCreateOptionsMenu(menu);
     }
 
-/*    @Override
+    @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         Log.d("Tag3", "Llegue hasta acá 2");
         int id = item.getItemId();
 
         //noinspection SimplifiableIfStatement
         if (id == R.id.mnu_cerrarSesion) {
-            upreferencias.putString("sesion", "cerrada");
+            //upreferencias.putString("sesion", "cerrada");
+
         }
 
 
 
         return true;
-    }*/
+    }
 
     public void requestJsonObject(String consulta) {
 
