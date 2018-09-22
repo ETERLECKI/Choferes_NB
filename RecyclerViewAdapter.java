@@ -1,11 +1,14 @@
 package ar.com.nbcargo.nbcargo_choferes;
 
-import android.app.AlarmManager;
-import android.app.PendingIntent;
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentManager;
+import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -25,93 +28,84 @@ import com.android.volley.toolbox.Volley;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.util.Calendar;
 import java.util.List;
 
-import devs.mulham.horizontalcalendar.HorizontalCalendar;
-
 public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewHolders> {
+
 
     private List<ItemObject> itemList;
     private Context context;
     private View layoutView;
     private Integer ocupacionCarril;
     public String url;
-    private String fechaCal;
-    private AlarmManager alarmMgr;
-    private PendingIntent alarmIntent;
-    public String chofer1;
+    public String fechaCal;
+    private String chofer1;
     public String unidad1;
-    SharedPreferences preferencias;
-    SharedPreferences.Editor upreferencias;
+    private String message;
+    static String confirmacion;
+    private String turno;
+    private String terror;
+    private String carril;
+    private String disponible;
+    final String[] items = {"Confirmar turno", "Cancelar turno", "Traspasar turno"};
+    private String modificar_turno;
+    public Fragment frag;
 
-    public RecyclerViewAdapter(Context context, List<ItemObject> itemList) {
+
+    SharedPreferences preferencias;
+
+
+    public RecyclerViewAdapter(Context context, List<ItemObject> itemList, Fragment frag) {
         this.itemList = itemList;
         this.context = context;
+        this.frag = frag;
     }
 
     @Override
     public RecyclerViewHolders onCreateViewHolder(ViewGroup parent, int viewType) {
+        Log.d("Tag2","Entro al adpater");
         layoutView = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_comb, null);
         RecyclerViewHolders rcv = new RecyclerViewHolders(layoutView);
         ocupacionCarril = 0;
-        alarmMgr = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         Intent intent = new Intent(context, RecyclerViewAdapter.class);
-        alarmIntent = PendingIntent.getBroadcast(context, 0, intent, 0);
         preferencias = context.getSharedPreferences("MisPreferencias", context.getApplicationContext().MODE_PRIVATE);
-        chofer1= preferencias.getString("nombre","error n");
-        unidad1= preferencias.getString("unidad","error u");
+        chofer1 = preferencias.getString("nombre", "error n");
+        unidad1 = preferencias.getString("unidad", "error u");
+
         return rcv;
     }
 
     @Override
     public void onBindViewHolder(final RecyclerViewHolders holder, final int position) {
-        Log.d("Tag2", "Entro al adapter");
+
         holder.hora_txt.setText((itemList.get(position).getHora()));
         holder.disponible1.setText(itemList.get(position).getHora());
         holder.disponible2.setText(itemList.get(position).getHora());
-        Log.d("Tag3","Llegué aqui");
+
         holder.carril1_card.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                generaTurno("1", holder.disponible1.getText().toString(), chofer1, unidad1);
-                // Alarma a las 8:30 a.m.
-                Calendar calendar = Calendar.getInstance();
-                calendar.setTimeInMillis(System.currentTimeMillis());
-                calendar.set(Calendar.HOUR_OF_DAY, 8);
-                calendar.set(Calendar.MINUTE, 30);
-            }
-        });
-        holder.carril1_card.setOnLongClickListener(new View.OnLongClickListener() {
-            @Override
-            public boolean onLongClick(View view) {
-                if (itemList.get(position).getEstado1() == "r")
-                    Toast.makeText(context, "Llamar a quien reservó carril 1", Toast.LENGTH_SHORT).show();
-                return false;
+                confirmacion = "no";
+                carril = "1";
+                disponible = holder.disponible1.getText().toString();
+                generaTurno(carril, disponible, chofer1, unidad1);
             }
         });
 
         holder.carril2_card.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                generaTurno("2", holder.disponible2.getText().toString(), chofer1, unidad1);
+                confirmacion = "no";
+                carril = "2";
+                disponible = holder.disponible1.getText().toString();
+                generaTurno(carril, disponible, chofer1, unidad1);
             }
         });
-        holder.carril2_card.setOnLongClickListener(new View.OnLongClickListener() {
-            @Override
-            public boolean onLongClick(View view) {
-                if (itemList.get(position).getEstado2() == "r")
-                    Toast.makeText(context, "Llamar a quien reservó carril 2", Toast.LENGTH_SHORT).show();
-                return false;
-            }
-        });
-
+//Si el primer carril (no es el carril 1, es el primer carril reservado) tiene reserva
         if (itemList.get(position).getCarril1() != "") {
             ocupacionCarril++;
-            Log.d("Tag2", "Valor de getCarril1: " + itemList.get(position).getCarril1());
             switch (itemList.get(position).getCarril1()) {
                 case "1": {
-                    Log.d("Tag2", "Entro a GetCarril1 carril 1" + " Hora:" + itemList.get(position).getHora().toString());
                     holder.chofer1.setText(itemList.get(position).getChofer1());
                     holder.t_patente11.setText(itemList.get(position).getunidad1());
                     if (itemList.get(position).getunidad1().length() == 6) {
@@ -120,17 +114,18 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewHolder
                     }
                     holder.patente1.setVisibility(View.VISIBLE);
                     holder.disponible1.setVisibility(View.GONE);
-                    holder.carril1_card.setCardBackgroundColor(Color.parseColor("#fff590"));
-                    //Si el turno está confirmado inhabilito el click
-                    if (itemList.get(position).getEstado1() == "c") {
+                    //Si el turno está confirmado inhabilito el click y coloco fondo rojo
+                    if (itemList.get(position).getEstado1().equals("c")) {
+                        holder.carril1_card.setCardBackgroundColor(Color.parseColor("#ef9a9a"));
                         holder.carril1_card.setClickable(false);
+                    } else {
+                        holder.carril1_card.setCardBackgroundColor(Color.parseColor("#fff590"));
                     }
-
+                    break;
                 }
-                break;
+
 
                 case "2": {
-                    Log.d("Tag2", "Entro a GetCarril1 carril 2");
                     holder.chofer2.setText(itemList.get(position).getChofer1());
                     holder.t_patente12.setText(itemList.get(position).getunidad1());
                     if (itemList.get(position).getunidad2().length() == 6) {
@@ -139,11 +134,12 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewHolder
                     }
                     holder.patente2.setVisibility(View.VISIBLE);
                     holder.disponible2.setVisibility(View.GONE);
-                    holder.carril2_card.setClickable(false);
-                    holder.carril2_card.setCardBackgroundColor(Color.parseColor("#ef9a9a"));
                     //Si el turno está confirmado inhabilito el click
-                    if (itemList.get(position).getEstado1() == "c") {
-                        holder.carril1_card.setClickable(false);
+                    if (itemList.get(position).getEstado1().equals("c")) {
+                        holder.carril2_card.setCardBackgroundColor(Color.parseColor("#ef9a9a"));
+                        holder.carril2_card.setClickable(false);
+                    } else {
+                        holder.carril2_card.setCardBackgroundColor(Color.parseColor("#fff590"));
                     }
                     break;
                 }
@@ -152,10 +148,8 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewHolder
         }
         if (itemList.get(position).getCarril2() != "") {
             ocupacionCarril++;
-            Log.d("Tag2", "Valor de getCarril2: " + itemList.get(position).getCarril1());
             switch (itemList.get(position).getCarril2()) {
                 case "1": {
-                    Log.d("Tag2", "Entro a GetCarril2 carril 1" + " Hora:" + itemList.get(position).getHora().toString());
                     holder.chofer1.setText(itemList.get(position).getChofer2());
                     holder.t_patente11.setText(itemList.get(position).getunidad2());
                     if (itemList.get(position).getunidad1().length() == 6) {
@@ -164,17 +158,17 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewHolder
                     }
                     holder.patente1.setVisibility(View.VISIBLE);
                     holder.disponible1.setVisibility(View.GONE);
-                    holder.carril1_card.setClickable(false);
-                    holder.carril1_card.setCardBackgroundColor(Color.parseColor("#fff590"));
                     //Si el turno está confirmado inhabilito el click
-                    if (itemList.get(position).getEstado2() == "c") {
-                        holder.carril2_card.setClickable(false);
+                    if (itemList.get(position).getEstado2().equals("c")) {
+                        holder.carril1_card.setCardBackgroundColor(Color.parseColor("#ef9a9a"));
+                        holder.carril1_card.setClickable(false);
+                    } else {
+                        holder.carril1_card.setCardBackgroundColor(Color.parseColor("#fff590"));
                     }
                     break;
                 }
 
                 case "2": {
-                    Log.d("Tag2", "Entro a GetCarril2 carril 2");
                     holder.chofer2.setText(itemList.get(position).getChofer2());
                     holder.t_patente12.setText(itemList.get(position).getunidad2());
                     if (itemList.get(position).getunidad2().length() == 6) {
@@ -183,11 +177,13 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewHolder
                     }
                     holder.patente2.setVisibility(View.VISIBLE);
                     holder.disponible2.setVisibility(View.GONE);
-                    holder.carril2_card.setClickable(false);
-                    holder.carril2_card.setCardBackgroundColor(Color.parseColor("#ef9a9a"));
+
                     //Si el turno está confirmado inhabilito el click
-                    if (itemList.get(position).getEstado2() == "c") {
+                    if (itemList.get(position).getEstado2().equals("c")) {
+                        holder.carril2_card.setCardBackgroundColor(Color.parseColor("#ef9a9a"));
                         holder.carril2_card.setClickable(false);
+                    } else {
+                        holder.carril2_card.setCardBackgroundColor(Color.parseColor("#fff590"));
                     }
                     break;
                 }
@@ -212,12 +208,13 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewHolder
 
     }
 
-    public void generaTurno(String carril, String hora, String chofer, String unidad) {
+    public void generaTurno(final String carril, final String hora, final String chofer, final String unidad) {
 
+        final AlertDialog.Builder builder = new AlertDialog.Builder(context);
         fechaCal = turnos_combustible.valorCalendario;
-        Toast.makeText(context, "Turno para carril " + carril + " el día " + fechaCal + " a las " + hora + " para el chofer " + chofer + " de la unidad " + unidad, Toast.LENGTH_SHORT).show();
-        url = "http://192.168.5.199/modifica_turnos.php?tipo=combustible&fecha=" + fechaCal + "&hora=" + hora + "&carril=" + carril + "&chofer=" + chofer + "&unidad=" + unidad + "&estado=r";
-        Log.d("Tag2", url);
+
+        url = "http://192.168.5.199/modifica_turnos.php?tipo=combustible&fecha=" + fechaCal + "&hora=" + hora + "&carril=" + carril + "&chofer=" + chofer + "&unidad=" + unidad + "&estado=r&confirmacion=" + confirmacion + "&accion=" + modificar_turno;
+
         url = url.replace(" ", "+");
         url = url.replace("á", "a");
         url = url.replace("é", "e");
@@ -225,31 +222,160 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewHolder
         url = url.replace("ó", "o");
         url = url.replace("ú", "u");
 
-        Log.d("Tag2", url);
-
         RequestQueue requestQueue = Volley.newRequestQueue(context.getApplicationContext());
         StringRequest stringRequest = new StringRequest(Request.Method.GET, url, new Response.Listener<String>() {
+
+
+
             @Override
             public void onResponse(String response) {
-
+                Log.d("Tag2", response);
                 try {
-                    Log.d("Tag2", "Valor de url: " + url);
+                    FragmentManager fragmentManager = ((AppCompatActivity) context).getSupportFragmentManager();
                     JSONObject jsonObject = new JSONObject(response);
-                    if (jsonObject.getInt("success") == 1) {
-                        Toast.makeText(context, "Acción guardada correctamente", Toast.LENGTH_SHORT).show();
+
+                    message = jsonObject.getString("message");
+                    turno = jsonObject.getString("error");
+                    terror = jsonObject.getString("terror");
+
+                    //verifico que no haya turno para el mismo chofer/unidad
+                    if (turno.equals("false")) {
+                        //si no hay turno pido confirmacion
+                        if (terror.equals("sinturno")) {
+
+                            //Genero cuadro de diálogo
+
+                            builder.setTitle("Confirmación de turno")
+                                    .setMessage(message);
+                            DialogInterface.OnClickListener confirmacionClickListener = new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialogInterface, int i) {
+                                    switch (i) {
+                                        case DialogInterface.BUTTON_POSITIVE:
+                                            confirmacion = "si";
+                                            generaTurno(carril, disponible, chofer1, unidad1);
+                                            break;
+
+                                        case DialogInterface.BUTTON_NEGATIVE:
+
+                                    }
+                                }
+                            };
+
+                            builder.setPositiveButton("Aceptar", confirmacionClickListener);
+                            builder.setNegativeButton("Cancelar", confirmacionClickListener);
+
+                            AlertDialog dialog = builder.create();
+                            dialog.show();
+                        } else {
+                            //Enviar refresh a turnos
+                            Log.d("Tag2", "Antes de mandaRefresh");
+                            //Log.d("Tag2",((turnos_combustible)frag).onRefresh());
+                            ((turnos_combustible)frag).onResume();
+                        }
+
+                        //Si ya tiene un turno, pregunto si quiere modificarlo
                     } else {
-                        Toast.makeText(context, "No se pudo guardar acción", Toast.LENGTH_SHORT).show();
+                        switch (jsonObject.getString("terror")) {
+                            //Si selecciona el mismo día que reservó
+                            case "reservadoenfecha":
+
+                                builder.setTitle("Modificar Turno")
+                                        .setSingleChoiceItems(items, -1, new DialogInterface.OnClickListener() {
+                                            @Override
+                                            public void onClick(DialogInterface dialogInterface, int i) {
+                                                switch (items[i]) {
+                                                    case "Confirmar turno":
+                                                        modificar_turno = "confirma";
+                                                        break;
+
+                                                    case "Cancelar turno":
+                                                        modificar_turno = "cancela";
+                                                        break;
+
+                                                    case "Traspasar turno":
+                                                        modificar_turno = "traspasa";
+                                                        break;
+                                                }
+                                            }
+                                        })
+                                        .setPositiveButton("Aceptar", new DialogInterface.OnClickListener() {
+                                            @Override
+                                            public void onClick(DialogInterface dialogInterface, int i) {
+                                                generaTurno(carril, hora, chofer, unidad);
+                                            }
+                                        })
+                                        .setNegativeButton("Cancelar", new DialogInterface.OnClickListener() {
+                                            @Override
+                                            public void onClick(DialogInterface dialogInterface, int i) {
+
+                                            }
+                                        });
+
+                                AlertDialog dialog1 = builder.create();
+                                dialog1.show();
+
+                                break;
+
+                            //Si selecciona otra fecha vacia
+                            case "reservadootrafecha":
+
+                                builder.setTitle("Cambiar fecha de reserva")
+                                        .setMessage(message)
+                                        .setPositiveButton("Aceptar", new DialogInterface.OnClickListener() {
+                                            @Override
+                                            public void onClick(DialogInterface dialogInterface, int i) {
+                                                generaTurno(carril, hora, chofer, unidad);
+                                            }
+                                        })
+                                        .setNegativeButton("Cancelar", new DialogInterface.OnClickListener() {
+                                            @Override
+                                            public void onClick(DialogInterface dialogInterface, int i) {
+
+                                            }
+                                        });
+
+                                AlertDialog dialog = builder.create();
+                                dialog.show();
+                                break;
+                            //Si selecciona una fecha ocupada por otro
+                            case "reservadootro":
+
+                                builder.setTitle("Solicitar cambio de turno")
+                                        .setMessage(message)
+                                        .setPositiveButton("Aceptar", new DialogInterface.OnClickListener() {
+                                            @Override
+                                            public void onClick(DialogInterface dialogInterface, int i) {
+                                                generaTurno(carril, hora, chofer, unidad);
+                                            }
+                                        })
+                                        .setNegativeButton("Cancelar", new DialogInterface.OnClickListener() {
+                                            @Override
+                                            public void onClick(DialogInterface dialogInterface, int i) {
+
+                                            }
+                                        });
+                                AlertDialog dialog2 = builder.create();
+                                dialog2.show();
+                                break;
+                            //Error de conexión
+                            case "conexion":
+                                Toast.makeText(context, message, Toast.LENGTH_LONG).show();
+                                break;
+                        }
+
                     }
                 } catch (JSONException e) {
+                    Log.d("Tag2", "Error en catch:" + e.getMessage().toString());
                     e.printStackTrace();
                 }
-
+                confirmacion = "no";
             }
         }, new Response.ErrorListener() {
             @Override
             public void onErrorResponse(VolleyError error) {
                 error.printStackTrace();
-                Log.d("TAG2", "Zona de error btn_realizado");
+                Log.d("Tag2", "Zona de error btn_realizado");
                 Toast.makeText(context, "Error al generar consulta", Toast.LENGTH_SHORT).show();
             }
         });
@@ -258,7 +384,6 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewHolder
         stringRequest.setRetryPolicy(policy);
         requestQueue.add(stringRequest);
     }
-
 
     @Override
     public int getItemCount() {
@@ -274,4 +399,6 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewHolder
     public long getItemId(int position) {
         return position;
     }
+
 }
+
