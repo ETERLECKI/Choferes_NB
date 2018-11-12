@@ -3,7 +3,9 @@ package ar.com.nbcargo.nbcargo_choferes;
 import android.content.Context;
 import android.net.Uri;
 import android.os.Bundle;
+import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
+import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -31,14 +33,18 @@ import devs.mulham.horizontalcalendar.utils.HorizontalCalendarListener;
 
 
 public class turnos_combustible extends Fragment {
+    @Override
+    public void onResume() {
+        requestJsonObject("combustible");
+        super.onResume();
+    }
 
-    private Calendar startDate_turnos;
-    private Calendar endDate_turnos;
     public HorizontalCalendar calendario_turnos;
-    public String fecha;
     public static String valorCalendario = "";
     private RecyclerViewAdapter adapter;
     private RecyclerView recyclerview_comb;
+    SwipeRefreshLayout swipeRefreshLayout;
+    int errorConexion;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -54,7 +60,6 @@ public class turnos_combustible extends Fragment {
         Calendar startDate = Calendar.getInstance();
         startDate.add(Calendar.DATE, 0);
         calendario_turnos = new HorizontalCalendar.Builder(rootView, R.id.calendarView_turnos)
-                //.range(startDate, endDate)
                 .range(startDate, endDate)
                 .datesNumberOnScreen(5)
                 .build();
@@ -74,6 +79,14 @@ public class turnos_combustible extends Fragment {
             }
         });
 
+        swipeRefreshLayout = rootView.findViewById(R.id.combustible_refresh);
+        swipeRefreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+            @Override
+            public void onRefresh() {
+                swipeRefreshLayout.setRefreshing(false);
+                requestJsonObject("combustible");
+            }
+        });
 
         return rootView;
 
@@ -83,7 +96,7 @@ public class turnos_combustible extends Fragment {
     public void requestJsonObject(String consulta) {
         RequestQueue queue = Volley.newRequestQueue(getContext());
 
-        String url = "http://192.168.5.199/arma_horario.php?consulta=" + consulta + "&fecha=" + turnos_combustible.valorCalendario;
+        String url = EndPoints.ROOT_URL + "arma_horario.php?consulta=" + consulta + "&fecha=" + turnos_combustible.valorCalendario;
         Log.d("Tag2", "Pagina: " + url);
         recyclerview_comb = getActivity().findViewById(R.id.recycler_comb);
 
@@ -99,7 +112,7 @@ public class turnos_combustible extends Fragment {
                     List<ItemObject> posts = new ArrayList<ItemObject>();
                     posts.clear();
                     posts = Arrays.asList(mGson.fromJson(response, ItemObject[].class));
-                    adapter = new RecyclerViewAdapter(getContext(), posts);
+                    adapter = new RecyclerViewAdapter(getContext(), posts,turnos_combustible.this);
 
                     recyclerview_comb.setAdapter(adapter);
 
@@ -121,7 +134,17 @@ public class turnos_combustible extends Fragment {
             @Override
             public void onErrorResponse(VolleyError error) {
                 Log.d("Tag2", "Error " + error.getMessage());
-                Toast.makeText(getContext(), "Error: " + error.getMessage(), Toast.LENGTH_LONG).show();
+                errorConexion = errorConexion + 1;
+                if (errorConexion > 5) {
+                    Toast.makeText(getContext(), "No se puede conectar a la base de datos, por favor verifique su conexión a internet", Toast.LENGTH_LONG).show();
+                } else {
+                    if (EndPoints.ROOT_URL.equals("http://192.168.5.14/")) {
+                        EndPoints.ROOT_URL = "http://143.0.245.9:49999/";
+                    } else {
+                        EndPoints.ROOT_URL = "http://192.168.5.14/";
+                    }
+                    requestJsonObject("combustible");
+                }
             }
         });
         queue.add(stringRequest);

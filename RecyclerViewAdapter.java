@@ -47,7 +47,8 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewHolder
     private String terror;
     private String carril;
     private String disponible;
-    final String[] items = {"Confirmar turno", "Cancelar turno", "Traspasar turno"};
+    //Se elimina "Traspasar turno" hasta tener finalizada la función
+    final String[] items = {"Confirmar turno", "Cancelar turno"};
     private String modificar_turno;
     public Fragment frag;
 
@@ -63,7 +64,6 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewHolder
 
     @Override
     public RecyclerViewHolders onCreateViewHolder(ViewGroup parent, int viewType) {
-        Log.d("Tag2","Entro al adpater");
         layoutView = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_comb, null);
         RecyclerViewHolders rcv = new RecyclerViewHolders(layoutView);
         ocupacionCarril = 0;
@@ -213,7 +213,7 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewHolder
         final AlertDialog.Builder builder = new AlertDialog.Builder(context);
         fechaCal = turnos_combustible.valorCalendario;
 
-        url = "http://192.168.5.199/modifica_turnos.php?tipo=combustible&fecha=" + fechaCal + "&hora=" + hora + "&carril=" + carril + "&chofer=" + chofer + "&unidad=" + unidad + "&estado=r&confirmacion=" + confirmacion + "&accion=" + modificar_turno;
+        url = EndPoints.ROOT_URL + "modifica_turnos.php?tipo=combustible&fecha=" + fechaCal + "&hora=" + hora + "&carril=" + carril + "&chofer=" + chofer + "&unidad=" + unidad + "&estado=r&confirmacion=" + confirmacion + "&accion=" + modificar_turno;
 
         url = url.replace(" ", "+");
         url = url.replace("á", "a");
@@ -224,7 +224,6 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewHolder
 
         RequestQueue requestQueue = Volley.newRequestQueue(context.getApplicationContext());
         StringRequest stringRequest = new StringRequest(Request.Method.GET, url, new Response.Listener<String>() {
-
 
 
             @Override
@@ -269,9 +268,11 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewHolder
                             dialog.show();
                         } else {
                             //Enviar refresh a turnos
+                            Toast.makeText(context, message, Toast.LENGTH_LONG).show();
                             Log.d("Tag2", "Antes de mandaRefresh");
+                            ((turnos_combustible) frag).onResume();
                             //Log.d("Tag2",((turnos_combustible)frag).onRefresh());
-                            ((turnos_combustible)frag).onResume();
+                            //((turnos_combustible)frag).onResume();
                         }
 
                         //Si ya tiene un turno, pregunto si quiere modificarlo
@@ -296,7 +297,12 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewHolder
                                                     case "Traspasar turno":
                                                         modificar_turno = "traspasa";
                                                         break;
+
+                                                    case "Solicitar apertura":
+
+                                                        break;
                                                 }
+
                                             }
                                         })
                                         .setPositiveButton("Aceptar", new DialogInterface.OnClickListener() {
@@ -318,13 +324,14 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewHolder
                                 break;
 
                             //Si selecciona otra fecha vacia
-                            case "reservadootrafecha":
+                            case "reservadootrafechar":
 
                                 builder.setTitle("Cambiar fecha de reserva")
                                         .setMessage(message)
                                         .setPositiveButton("Aceptar", new DialogInterface.OnClickListener() {
                                             @Override
                                             public void onClick(DialogInterface dialogInterface, int i) {
+                                                modificar_turno = "cambia_fecha";
                                                 generaTurno(carril, hora, chofer, unidad);
                                             }
                                         })
@@ -337,6 +344,22 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewHolder
 
                                 AlertDialog dialog = builder.create();
                                 dialog.show();
+                                break;
+
+                            case "reservadootrafechac":
+
+                                builder.setTitle("No se puede cambiar fecha de reserva")
+                                        .setMessage(message)
+                                        .setPositiveButton("Aceptar", new DialogInterface.OnClickListener() {
+                                            @Override
+                                            public void onClick(DialogInterface dialogInterface, int i) {
+
+                                            }
+                                        });
+
+                                AlertDialog dialog3 = builder.create();
+                                dialog3.show();
+
                                 break;
                             //Si selecciona una fecha ocupada por otro
                             case "reservadootro":
@@ -383,6 +406,7 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewHolder
         RetryPolicy policy = new DefaultRetryPolicy(socketTimeout, DefaultRetryPolicy.DEFAULT_MAX_RETRIES, DefaultRetryPolicy.DEFAULT_BACKOFF_MULT);
         stringRequest.setRetryPolicy(policy);
         requestQueue.add(stringRequest);
+        ((turnos_combustible) frag).onResume();
     }
 
     @Override

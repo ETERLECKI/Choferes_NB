@@ -40,10 +40,9 @@ public class Login extends AppCompatActivity {
     EditText EditUsuario;
     AutoCompleteTextView patente;
     ArrayList<String> itemsUnidad;
-    String URLunidad;
     String URLusuario;
     String usuario;
-    private String urLDNI;
+    int errorConexion;
 
     @Override
     protected void onRestart() {
@@ -51,6 +50,13 @@ public class Login extends AppCompatActivity {
         preferencias = getSharedPreferences("MisPreferencias", getApplicationContext().MODE_PRIVATE);
         sesion = preferencias.getString("sesion", "cerrada");
         upreferencias = preferencias.edit();
+    }
+
+    @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+        finishAffinity();
+        System.exit(0);
     }
 
     @Override
@@ -65,20 +71,20 @@ public class Login extends AppCompatActivity {
         patente = findViewById(R.id.log_patente);
         patente.setThreshold(1);
         itemsUnidad = new ArrayList<>();
-        URLunidad = "http://192.168.5.199/qunidades.php";
-        urLDNI = "http://192.168.5.199/dni.php";
-        URLusuario="http://192.168.5.199/login_choferes.php";
+        URLusuario = EndPoints.ROOT_URL + "login_choferes.php";
         estadoSesion = findViewById(R.id.log_chk_sesion);
         btnIngreso = findViewById(R.id.log_btn_in);
         comprobar_dni = findViewById(R.id.log_btn_dni);
         EditUsuario = findViewById(R.id.log_nombre);
         EditDNI = findViewById(R.id.log_dni);
+        errorConexion = 0;
 
-        Loadunidad(URLunidad);
+        Loadunidad();
 
         comprobar_dni.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                errorConexion = 0;
                 comprobarDni();
             }
         });
@@ -96,11 +102,12 @@ public class Login extends AppCompatActivity {
         }
     }
 
-    private void Loadunidad(String urLunidad) {
+    private void Loadunidad() {
         RequestQueue requestQueue = Volley.newRequestQueue(getApplicationContext());
-        StringRequest stringRequest = new StringRequest(Request.Method.GET, urLunidad, new Response.Listener<String>() {
+        StringRequest stringRequest = new StringRequest(Request.Method.GET, EndPoints.ROOT_URL + "qunidades.php", new Response.Listener<String>() {
             @Override
             public void onResponse(String response) {
+                Log.d("Tag2", response);
 
                 try {
                     JSONObject jsonObject = new JSONObject(response);
@@ -114,6 +121,7 @@ public class Login extends AppCompatActivity {
                     }
                     patente.setAdapter(new ArrayAdapter<String>(Login.this, android.R.layout.simple_list_item_1, itemsUnidad));
                 } catch (JSONException e) {
+                    Log.d("Tag1", "error en catch");
                     e.printStackTrace();
                 }
 
@@ -121,6 +129,7 @@ public class Login extends AppCompatActivity {
         }, new Response.ErrorListener() {
             @Override
             public void onErrorResponse(VolleyError error) {
+                Log.d("Tag1", "Error volley");
                 error.printStackTrace();
             }
         });
@@ -132,39 +141,44 @@ public class Login extends AppCompatActivity {
 
     private void comprobarDni() {
         RequestQueue requestQueue = Volley.newRequestQueue(getApplicationContext());
-        StringRequest stringRequest = new StringRequest(Request.Method.GET, urLDNI + "?dni=" + EditDNI.getText().toString(), new Response.Listener<String>() {
+        StringRequest stringRequest = new StringRequest(Request.Method.GET, EndPoints.ROOT_URL + "dni.php" + "?dni=" + EditDNI.getText().toString(), new Response.Listener<String>() {
 
             @Override
             public void onResponse(String response) {
-                Log.d("Tag2", "Response: " + response);
                 try {
                     JSONObject jsonObject = new JSONObject(response);
                     if (jsonObject.getInt("success") == 1) {
-                        Log.d("Tag2", "Entro al success");
-                        //JSONArray jsonArray = jsonObject.getJSONArray("Unidad");
-                        //for (int i = 0; i < jsonArray.length(); i++) {
-                        //JSONObject jsonObject1 = jsonArray.getJSONObject(i);
                         String DNI = jsonObject.getString("nombre");
                         Log.d("Tag2", "nombre usuario:" + DNI);
                         EditUsuario.setText(DNI);
-                        //itemsUnidad.add(unidad);
-                        //}
                     }
                 } catch (JSONException e) {
                     e.printStackTrace();
                     Log.d("Tag2", "Entro a exception");
-                    Log.d("Tag2", "error: " + e.getMessage().toString());
                 }
 
             }
         }, new Response.ErrorListener() {
             @Override
             public void onErrorResponse(VolleyError error) {
-                error.printStackTrace();
-                Log.d("Tag2", "Entro a error");
+                Log.d("Tag2",EndPoints.ROOT_URL + "dni.php" + "?dni=" + EditDNI.getText().toString());
+                errorConexion = errorConexion + 1;
+                if (errorConexion > 5) {
+                    Toast.makeText(Login.this, "No se puede conectar a la base de datos, por favor verifique su conexión a internet", Toast.LENGTH_LONG).show();
+                } else {
+                    if (EndPoints.ROOT_URL.equals("http://192.168.5.14/")) {
+                        EndPoints.ROOT_URL = "http://143.0.245.9:49999/";
+                        upreferencias.putString("url", "http://143.0.245.9:49999/");
+                    } else {
+                        EndPoints.ROOT_URL = "http://192.168.5.14/";
+                        upreferencias.putString("url", "http://192.168.5.14/");
+                    }
+                    upreferencias.commit();
+                    comprobarDni();
+                }
             }
         });
-        int socketTimeout = 30000;
+        int socketTimeout = 3000;
         RetryPolicy policy = new DefaultRetryPolicy(socketTimeout, DefaultRetryPolicy.DEFAULT_MAX_RETRIES, DefaultRetryPolicy.DEFAULT_BACKOFF_MULT);
         stringRequest.setRetryPolicy(policy);
         requestQueue.add(stringRequest);
@@ -173,8 +187,8 @@ public class Login extends AppCompatActivity {
     private void ingresar() {
 
         if (!EditUsuario.getText().toString().equals("")) {
-            if (!patente.getText().toString().equals("")){
-                Toast.makeText(this, "No hay error", Toast.LENGTH_LONG).show();
+            if (!patente.getText().toString().equals("")) {
+                Toast.makeText(this, "Acceso correcto", Toast.LENGTH_LONG).show();
                 upreferencias.putString("dni", EditDNI.getText().toString());
                 upreferencias.putString("nombre", EditUsuario.getText().toString());
                 upreferencias.putString("unidad", patente.getText().toString());
@@ -183,6 +197,7 @@ public class Login extends AppCompatActivity {
                     upreferencias.putString("sesion", "abierta");
                 }
                 upreferencias.commit();
+                //guardarUsuario();
             } else {
                 Toast.makeText(this, "Error de patente", Toast.LENGTH_LONG).show();
             }
@@ -196,7 +211,7 @@ public class Login extends AppCompatActivity {
 
     private void guardarUsuario() {
         RequestQueue requestQueue = Volley.newRequestQueue(getApplicationContext());
-        StringRequest stringRequest = new StringRequest(Request.Method.GET, urLDNI + "?dni=" + EditDNI.getText().toString(), new Response.Listener<String>() {
+        StringRequest stringRequest = new StringRequest(Request.Method.GET, EndPoints.ROOT_URL + "dni.php" + "?dni=" + EditDNI.getText().toString(), new Response.Listener<String>() {
 
             @Override
             public void onResponse(String response) {

@@ -13,8 +13,11 @@ import android.provider.Settings;
 import android.support.annotation.Nullable;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.LinearLayoutCompat;
 import android.util.Log;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.Toast;
@@ -37,16 +40,21 @@ import java.util.Map;
 
 public class anuncio_combustible extends AppCompatActivity {
 
-    //ImageView to display image selected
+    //ImageView para mostrar la imagen seleccionada
     ImageView imageView;
 
-    //edittext for getting the tags input
+    //edittext para obtener odometro
     EditText editTextTags;
 
     private String unidad;
     private String nombreArchivo;
-
+    public Bitmap photo;
+    private Button imagenBTN;
+    private Button uploadBTN;
+    private LinearLayoutCompat.LayoutParams params;
     public SharedPreferences preferencias;
+
+    private static final int CAMERA_REQUEST = 1888;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -55,15 +63,16 @@ public class anuncio_combustible extends AppCompatActivity {
 
         preferencias = getSharedPreferences("MisPreferencias", getApplicationContext().MODE_PRIVATE);
 
-        //initializing views
         imageView = (ImageView) findViewById(R.id.imageView);
         editTextTags = (EditText) findViewById(R.id.editTextTags);
         unidad = preferencias.getString("unidad", "null");
+        imagenBTN = (Button) findViewById(R.id.buttonUploadImage);
+        uploadBTN= (Button) findViewById(R.id.buttonAnuncio);
+        params = new LinearLayoutCompat.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.WRAP_CONTENT);
+        params.setMargins(0,0,0,0);
 
 
-        //checking the permission
-        //if the permission is not given we will open setting to add permission
-        //else app will not open
+        //chequea permisos
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && ContextCompat.checkSelfPermission(this,
                 Manifest.permission.READ_EXTERNAL_STORAGE)
                 != PackageManager.PERMISSION_GRANTED) {
@@ -74,8 +83,7 @@ public class anuncio_combustible extends AppCompatActivity {
             return;
         }
 
-        //adding click listener to button
-        findViewById(R.id.buttonUploadImage).setOnClickListener(new View.OnClickListener() {
+        imagenBTN.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 //if the tags edittext is empty
@@ -86,35 +94,37 @@ public class anuncio_combustible extends AppCompatActivity {
                     return;
                 }
 
-                //if everything is ok we will open image chooser
-                Intent i = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
-                startActivityForResult(i, 100);
+                //si todo está bien toma la foto
+                Intent cameraIntent = new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE);
+                startActivityForResult(cameraIntent, CAMERA_REQUEST);
+            }
 
+        });
+
+        uploadBTN.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                uploadBitmap(photo);
             }
         });
+
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == 100 && resultCode == RESULT_OK && data != null) {
 
-            //getting the image Uri
-            Uri imageUri = data.getData();
-            try {
-                //getting bitmap object from uri
-                Bitmap bitmap = MediaStore.Images.Media.getBitmap(this.getContentResolver(), imageUri);
 
-                //displaying selected image to imageview
-                imageView.setImageBitmap(bitmap);
+        if (requestCode == CAMERA_REQUEST) {
+            photo = (Bitmap) data.getExtras().get("data");
+            imageView.setImageBitmap(photo);
+            uploadBTN.setEnabled(true);
 
-                //calling the method uploadBitmap to upload image
-                uploadBitmap(bitmap);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            //uploadBitmap(photo);
         }
+
     }
+
 
     /*
      * The method is taking Bitmap as an argument
@@ -127,7 +137,7 @@ public class anuncio_combustible extends AppCompatActivity {
      * */
     public byte[] getFileDataFromDrawable(Bitmap bitmap) {
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-        bitmap.compress(Bitmap.CompressFormat.JPEG, 50, byteArrayOutputStream);
+        bitmap.compress(Bitmap.CompressFormat.JPEG, 80, byteArrayOutputStream);
         return byteArrayOutputStream.toByteArray();
     }
 
@@ -170,7 +180,6 @@ public class anuncio_combustible extends AppCompatActivity {
             @Override
             protected Map<String, DataPart> getByteData() throws AuthFailureError {
                 Map<String, DataPart> params = new HashMap<>();
-                //long imagename = System.currentTimeMillis();
                 String imagename = nombreArchivo;
                 params.put("pic", new DataPart(imagename + ".jpg", getFileDataFromDrawable(bitmap)));
                 return params;
