@@ -1,11 +1,13 @@
 package ar.com.nbcargo.nbcargo_choferes;
 
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.Button;
@@ -33,9 +35,9 @@ public class Login extends AppCompatActivity {
     public SharedPreferences preferencias;
     public SharedPreferences.Editor upreferencias;
     String sesion;
-    CheckBox estadoSesion;
     Button btnIngreso;
     Button comprobar_dni;
+    Button unidad_btn;
     EditText EditDNI;
     EditText EditUsuario;
     AutoCompleteTextView patente;
@@ -43,6 +45,8 @@ public class Login extends AppCompatActivity {
     String URLusuario;
     String usuario;
     int errorConexion;
+    InputMethodManager imm;
+
 
     @Override
     protected void onRestart() {
@@ -72,12 +76,15 @@ public class Login extends AppCompatActivity {
         patente.setThreshold(1);
         itemsUnidad = new ArrayList<>();
         URLusuario = EndPoints.ROOT_URL + "login_choferes.php";
-        estadoSesion = findViewById(R.id.log_chk_sesion);
         btnIngreso = findViewById(R.id.log_btn_in);
         comprobar_dni = findViewById(R.id.log_btn_dni);
+        unidad_btn=findViewById(R.id.log_btn_unidad);
         EditUsuario = findViewById(R.id.log_nombre);
         EditDNI = findViewById(R.id.log_dni);
         errorConexion = 0;
+
+        EditDNI.requestFocus();
+        imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
 
         Loadunidad();
 
@@ -96,9 +103,15 @@ public class Login extends AppCompatActivity {
             }
         });
 
+        unidad_btn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                imm.hideSoftInputFromWindow(EditDNI.getWindowToken(), 0);
+            }
+        });
 
         if (sesion.equals("abierta")) {
-            startActivity(new Intent(this, MainActivity.class));
+            startActivity(new Intent(this, Principal.class));
         }
     }
 
@@ -140,6 +153,7 @@ public class Login extends AppCompatActivity {
     }
 
     private void comprobarDni() {
+        imm.hideSoftInputFromWindow(EditDNI.getWindowToken(), 0);
         RequestQueue requestQueue = Volley.newRequestQueue(getApplicationContext());
         StringRequest stringRequest = new StringRequest(Request.Method.GET, EndPoints.ROOT_URL + "dni.php" + "?dni=" + EditDNI.getText().toString(), new Response.Listener<String>() {
 
@@ -192,10 +206,8 @@ public class Login extends AppCompatActivity {
                 upreferencias.putString("dni", EditDNI.getText().toString());
                 upreferencias.putString("nombre", EditUsuario.getText().toString());
                 upreferencias.putString("unidad", patente.getText().toString());
-                startActivity(new Intent(this, MainActivity.class));
-                if (estadoSesion.isChecked()) {
+                startActivity(new Intent(this, Principal.class));
                     upreferencias.putString("sesion", "abierta");
-                }
                 upreferencias.commit();
                 //guardarUsuario();
             } else {

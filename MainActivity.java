@@ -63,11 +63,13 @@ public class MainActivity extends AppCompatActivity {
                     //((turnos_combustible)frag).requestJsonObject("combustible");
                     //requestJsonObject("combustible");
                     return true;
-                case R.id.navigation_dashboard:
+                case R.id.navigation_lavadero:
                     //((turnos_combustible)frag).requestJsonObject("lavadero");
                     //requestJsonObject("lavadero");
                     return true;
-                case R.id.navigation_novedades:
+                case R.id.navigation_taller:
+                    return true;
+                case R.id.navigation_porton:
                     Intent i = new Intent(getApplicationContext(), anuncio_combustible.class);
                     startActivity(i);
                     return true;
@@ -75,13 +77,6 @@ public class MainActivity extends AppCompatActivity {
             return false;
         }
     };
-
-    @Override
-    public void onBackPressed() {
-        super.onBackPressed();
-        finishAffinity();
-        System.exit(0);
-    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -95,13 +90,10 @@ public class MainActivity extends AppCompatActivity {
         recyclerview_comb.setLayoutManager(layoutManager);
         BottomNavigationView navigation = (BottomNavigationView) findViewById(R.id.navigation);
         Menu menuNavigation = navigation.getMenu();
-        MenuItem mnuNovedades = menuNavigation.findItem(R.id.navigation_novedades);
+        MenuItem navTurnos_porton = menuNavigation.findItem(R.id.navigation_porton);
         navigation.setOnNavigationItemSelectedListener(mOnNavigationItemSelectedListener);
         Chofer1 = preferencias.getString("nombre", "Error nombre");
         Unidad1 = preferencias.getString("unidad", "Error unidad");
-        if (preferencias.getString("dni", "").equals("92722133")) {
-            mnuNovedades.setEnabled(true);
-        }
 
     }
 
